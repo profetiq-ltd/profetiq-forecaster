@@ -1,0 +1,9 @@
+Proprietary License
+
+Copyright (c) 2026 ProfetiQ Ltd. All rights reserved.
+
+This repository is made publicly available to help subscribed ProfetiQ customers use the ProfetiQ Forecaster API. You may clone, install, and use the SDK to access ProfetiQ Forecaster services under your applicable ProfetiQ subscription agreement.
+
+No rights are granted to copy, modify, redistribute, sublicense, reverse engineer, or use this software except as expressly permitted by a written agreement with ProfetiQ Ltd.
+
+This repository does not include ProfetiQ proprietary data pipelines, Common Crawl ingestion, build-index code, WSI generation code, private datasets, or model-training internals.
