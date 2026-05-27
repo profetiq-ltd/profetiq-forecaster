@@ -88,9 +88,9 @@ class ProfetiQForecaster:
         self,
         *,
         segment: str,
-        wsi_ba: float,
-        wsi_bs: float,
         customer_forecast: list[dict[str, Any]],
+        wsi_ba: Optional[float] = None,
+        wsi_bs: Optional[float] = None,
         origin_quarter: Optional[str] = None,
         origin_segment_share: Optional[float] = None,
         origin_units: Optional[float] = None,
@@ -102,11 +102,11 @@ class ProfetiQForecaster:
     ) -> dict[str, Any]:
         scenario: dict[str, Any] = {
             "segment": segment,
-            "wsi_ba": wsi_ba,
-            "wsi_bs": wsi_bs,
             "customer_forecast": customer_forecast,
         }
         optional_values = {
+            "wsi_ba": wsi_ba,
+            "wsi_bs": wsi_bs,
             "origin_quarter": origin_quarter,
             "origin_segment_share": origin_segment_share,
             "origin_units": origin_units,
@@ -129,6 +129,22 @@ class ProfetiQForecaster:
                 },
             )
         )
+
+    def wsi_signal(
+        self,
+        *,
+        make: str,
+        segment: str,
+        model: Optional[str] = None,
+        quarter: Optional[str] = None,
+    ) -> dict[str, Any]:
+        params = {"make": make, "segment": segment}
+        if model:
+            params["model"] = model
+        if quarter:
+            params["quarter"] = quarter
+        payload = self._request("GET", "/v1/wsi-signals", params=params)
+        return dict(payload.get("signal") or {})
 
     def backtest(
         self,

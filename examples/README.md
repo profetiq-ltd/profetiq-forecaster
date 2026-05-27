@@ -23,7 +23,7 @@ python examples/forecast_pipeline.py
 The script:
 
 - creates a `ProfetiQForecaster` client
-- sends current-quarter BA/BS values
+- lets the API resolve current-quarter BA/BS from ProfetiQ WSI
 - sends a customer constrained segment-share forecast
 - prints constrained versus ProfetiQ unconstrained movement output
 

@@ -66,12 +66,12 @@ client = ProfetiQForecaster(
 The recommended workflow is a scenario forecast. You provide:
 
 - vehicle segment: `mass`, `premium`, or `luxury`
-- current/origin quarter Brand Attractiveness: `wsi_ba`
-- current/origin quarter Brand Strength: `wsi_bs`
+- make/model and origin quarter so the API can resolve ProfetiQ Brand Attractiveness and Brand Strength from proprietary WSI
 - your constrained customer sales forecast for Q+1 to Q+3
-- optional make/model labels for reporting only
 
 The model is trained from historical UK DVLA registrations and ProfetiQ WSI at make + model + segment grain. At scenario inference time, make and model identity are not model features. Movement is driven by segment, `wsi_ba`, and `wsi_bs`.
+
+You may also pass `wsi_ba` and `wsi_bs` explicitly. If either is omitted, the API resolves both values from the ProfetiQ WSI dataset using make/model/segment/quarter, then runs the forecast only from the resolved BA/BS values and segment.
 
 Each customer forecast row must include either:
 
@@ -99,8 +99,6 @@ forecast = client.scenario_forecast(
     model="X3",
     origin_quarter="2025-Q3",
     origin_segment_share=0.0226,
-    wsi_ba=4.94,
-    wsi_bs=8.84,
     customer_forecast=[
         {
             "horizon": 1,
@@ -131,6 +129,21 @@ for point in forecast["points"]:
 ```
 
 Make/model labels are returned for readability. They do not alter scenario output when segment, BA/BS, and constrained forecasts are identical.
+
+## Resolve WSI Signal
+
+```python
+signal = client.wsi_signal(
+    make="BMW",
+    model="X3",
+    segment="premium",
+    quarter="2025-Q3",
+)
+
+print(signal["wsi_ba"], signal["wsi_bs"])
+```
+
+This endpoint is useful for inspecting the proprietary BA/BS values the scenario forecast will use. The forecast calculation still uses only segment plus the resolved BA/BS values.
 
 ## Discover Entities
 
@@ -247,8 +260,9 @@ client = ProfetiQForecaster()
 
 job = client.scenario_forecast(
     segment="premium",
-    wsi_ba=4.94,
-    wsi_bs=8.84,
+    make="BMW",
+    model="X3",
+    origin_quarter="2025-Q3",
     customer_forecast=[
         {"horizon": 1, "constrained_segment_share": 0.021},
         {"horizon": 2, "constrained_segment_share": 0.020},
@@ -271,6 +285,7 @@ while True:
 The SDK wraps these API endpoints:
 
 - `GET /v1/entities`
+- `GET /v1/wsi-signals`
 - `POST /v1/forecasts` for scenario and entity forecasts
 - `POST /v1/backtests`
 - `GET /v1/jobs/{job_id}`
