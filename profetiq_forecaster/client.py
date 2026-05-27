@@ -84,6 +84,52 @@ class ProfetiQForecaster:
             )
         )
 
+    def scenario_forecast(
+        self,
+        *,
+        segment: str,
+        wsi_ba: float,
+        wsi_bs: float,
+        customer_forecast: list[dict[str, Any]],
+        origin_quarter: Optional[str] = None,
+        origin_segment_share: Optional[float] = None,
+        origin_units: Optional[float] = None,
+        origin_segment_total_units: Optional[float] = None,
+        make: Optional[str] = None,
+        model: Optional[str] = None,
+        horizons: Optional[list[int]] = None,
+        async_job: bool = False,
+    ) -> dict[str, Any]:
+        scenario: dict[str, Any] = {
+            "segment": segment,
+            "wsi_ba": wsi_ba,
+            "wsi_bs": wsi_bs,
+            "customer_forecast": customer_forecast,
+        }
+        optional_values = {
+            "origin_quarter": origin_quarter,
+            "origin_segment_share": origin_segment_share,
+            "origin_units": origin_units,
+            "origin_segment_total_units": origin_segment_total_units,
+            "make": make,
+            "model": model,
+        }
+        scenario.update({key: value for key, value in optional_values.items() if value is not None})
+        return dict(
+            self._request(
+                "POST",
+                "/v1/forecasts",
+                json={
+                    "market": "UK",
+                    "level": "model",
+                    "target": "segment_share",
+                    "horizons": horizons or [1, 2, 3],
+                    "async_job": async_job,
+                    "scenario": scenario,
+                },
+            )
+        )
+
     def backtest(
         self,
         *,

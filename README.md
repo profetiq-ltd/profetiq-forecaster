@@ -2,7 +2,7 @@
 
 Python SDK and examples for the ProfetiQ Forecaster API.
 
-ProfetiQ Forecaster helps subscription customers forecast UK vehicle segment market-share movement and observed registration demand for the next three quarters. The product uses ProfetiQ WSI signals, including current/latest available Brand Attractiveness and Brand Strength, to parameterize an ETS-style forecasting model.
+ProfetiQ Forecaster helps subscription customers forecast UK vehicle segment market-share movement and observed registration demand for the next three quarters. The product uses current/latest ProfetiQ WSI Brand Attractiveness and Brand Strength inputs to parameterize an ETS-style movement model.
 
 This public repository contains only the client SDK, usage examples, and setup instructions. It does not contain ProfetiQ's proprietary WSI generation, Common Crawl ingestion, build-index code, model-training data, DVLA/WSI raw data, backend auth/payment services, or private forecasting internals.
 
@@ -63,18 +63,74 @@ client = ProfetiQForecaster(
 
 ## Forecasting Logic
 
-The API forecasts `segment_share` for UK vehicle entities. Segment share is calculated within the model's assigned vehicle segment, such as `mass`, `premium`, or `luxury`.
+The recommended workflow is a scenario forecast. You provide:
 
-For each forecast, the API:
+- vehicle segment: `mass`, `premium`, or `luxury`
+- current/origin quarter Brand Attractiveness: `wsi_ba`
+- current/origin quarter Brand Strength: `wsi_bs`
+- your constrained customer sales forecast for Q+1 to Q+3
+- optional make/model labels for reporting only
 
-1. Finds the selected make or model entity.
-2. Uses the latest/current available WSI quarter for that entity.
-3. Reads that quarter's Brand Attractiveness and Brand Strength signals.
-4. Uses those signals to parameterize ETS market-share movement.
-5. Returns forecasts for the requested horizons, normally Q+1, Q+2, and Q+3.
-6. Derives registration forecasts from predicted segment share and a segment registration baseline.
+The model is trained from historical UK DVLA registrations and ProfetiQ WSI at make + model + segment grain. At scenario inference time, make and model identity are not model features. Movement is driven by segment, `wsi_ba`, and `wsi_bs`.
 
-Manual scenario inputs for arbitrary Brand Attractiveness and Brand Strength values are not part of this SDK version. The service uses the current/latest ProfetiQ WSI values available to the API.
+Each customer forecast row must include either:
+
+- `constrained_segment_share`, or
+- `constrained_units` plus `segment_total_units`
+
+The response separates:
+
+- `customer_constrained`
+- `profetiq_unconstrained`
+- `delta_to_customer`
+
+Entity forecasts are still available for compatibility, but scenario forecasts are the product workflow for customer-specific constrained forecasts.
+
+## Scenario Forecast
+
+```python
+from profetiq_forecaster import ProfetiQForecaster
+
+client = ProfetiQForecaster()
+
+forecast = client.scenario_forecast(
+    segment="premium",
+    make="BMW",
+    model="X3",
+    origin_quarter="2025-Q3",
+    origin_segment_share=0.0226,
+    wsi_ba=4.94,
+    wsi_bs=8.84,
+    customer_forecast=[
+        {
+            "horizon": 1,
+            "quarter": "2025-Q4",
+            "constrained_segment_share": 0.021,
+            "segment_total_units": 110000,
+        },
+        {
+            "horizon": 2,
+            "quarter": "2026-Q1",
+            "constrained_segment_share": 0.020,
+            "segment_total_units": 105000,
+        },
+        {
+            "horizon": 3,
+            "quarter": "2026-Q2",
+            "constrained_segment_share": 0.022,
+            "segment_total_units": 120000,
+        },
+    ],
+)
+
+for point in forecast["points"]:
+    print(point["forecast_quarter"])
+    print("customer", point["customer_constrained"]["segment_share"])
+    print("profetiq", point["profetiq_unconstrained"]["segment_share"])
+    print("delta", point["delta_to_customer"]["segment_share"])
+```
+
+Make/model labels are returned for readability. They do not alter scenario output when segment, BA/BS, and constrained forecasts are identical.
 
 ## Discover Entities
 
@@ -189,10 +245,15 @@ For larger jobs, request async execution and poll the job endpoint:
 ```python
 client = ProfetiQForecaster()
 
-job = client.forecast(
-    level="model",
-    entity_id="model:example:example:premium",
-    horizons=[1, 2, 3],
+job = client.scenario_forecast(
+    segment="premium",
+    wsi_ba=4.94,
+    wsi_bs=8.84,
+    customer_forecast=[
+        {"horizon": 1, "constrained_segment_share": 0.021},
+        {"horizon": 2, "constrained_segment_share": 0.020},
+        {"horizon": 3, "constrained_segment_share": 0.022},
+    ],
     async_job=True,
 )
 
@@ -210,11 +271,13 @@ while True:
 The SDK wraps these API endpoints:
 
 - `GET /v1/entities`
-- `POST /v1/forecasts`
+- `POST /v1/forecasts` for scenario and entity forecasts
 - `POST /v1/backtests`
 - `GET /v1/jobs/{job_id}`
+- `GET /v1/tokens`
+- `POST /v1/tokens`
 
-Token management happens in the ProfetiQ user portal and is not required for normal SDK use.
+Token creation is normally handled in the ProfetiQ user portal. SDK users only need the issued token.
 
 ## Common Errors
 
@@ -231,6 +294,8 @@ Token management happens in the ProfetiQ user portal and is not required for nor
 
 - The entity cannot be resolved.
 - The selected make/model/segment is unavailable in the current forecast panel.
+- Scenario rows using `constrained_units` must also provide `segment_total_units`.
+- Scenario BA/BS values must be finite numbers.
 
 `422 Unprocessable Entity`
 

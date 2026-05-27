@@ -23,8 +23,9 @@ python examples/forecast_pipeline.py
 The script:
 
 - creates a `ProfetiQForecaster` client
-- lists premium model-level entities
-- forecasts the first returned entity for Q+1, Q+2, and Q+3
+- sends current-quarter BA/BS values
+- sends a customer constrained segment-share forecast
+- prints constrained versus ProfetiQ unconstrained movement output
 
 ## Backtest Pipeline
 
