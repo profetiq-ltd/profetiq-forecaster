@@ -1,23 +1,38 @@
 from __future__ import annotations
 
-from profetiq_forecaster import ProfetiQForecaster
+from pathlib import Path
+
+from profetiq_forecaster import ProfetiQForecaster, load_customer_sales_forecast_csv
 
 
 def main() -> None:
     client = ProfetiQForecaster()
-    forecast = client.scenario_forecast(
-        segment="premium",
-        make="BMW",
-        model="X3",
-        origin_quarter="2025-Q3",
-        origin_segment_share=0.0226,
-        customer_forecast=[
-            {"horizon": 1, "quarter": "2025-Q4", "constrained_segment_share": 0.021},
-            {"horizon": 2, "quarter": "2026-Q1", "constrained_segment_share": 0.020},
-            {"horizon": 3, "quarter": "2026-Q2", "constrained_segment_share": 0.022},
-        ],
+
+    data_dir = Path(__file__).resolve().parent / "data"
+    model_rows = load_customer_sales_forecast_csv(
+        data_dir / "byd_model_customer_sales_forecast_2026.csv",
+        level="model",
     )
-    print(forecast)
+    make_rows = load_customer_sales_forecast_csv(
+        data_dir / "byd_make_customer_sales_forecast_2026.csv",
+        level="make",
+    )
+
+    model_forecast = client.forecast(
+        level="model",
+        make="BYD",
+        model="Seal",
+        segment="premium",
+        customer_sales_forecast=model_rows,
+    )
+    make_forecast = client.forecast(
+        level="make",
+        make="BYD",
+        segment="mass",
+        customer_sales_forecast=make_rows,
+    )
+    print(model_forecast)
+    print(make_forecast)
 
 
 if __name__ == "__main__":
