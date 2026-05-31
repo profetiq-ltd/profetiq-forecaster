@@ -23,9 +23,17 @@ python examples/forecast_pipeline.py
 The script:
 
 - creates a `ProfetiQForecaster` client
-- lets the API resolve current-quarter BA/BS from ProfetiQ WSI
-- sends a customer constrained segment-share forecast
-- prints constrained versus ProfetiQ unconstrained movement output
+- loads the BYD make-level and model-level sample customer sales forecast CSVs
+- lets the API resolve current-quarter BA/BS from ProfetiQ SQLite WSI
+- sends production `registrations` forecasts for make-level and model-level flows
+- prints profetiQ forecast units, customer units, and gap output
+
+Sample files live in `examples/data/`:
+
+- `byd_model_customer_sales_forecast_2026.csv`
+- `byd_make_customer_sales_forecast_2026.csv`
+
+The BYD values are synthetic manual-test inputs informed by public BYD UK growth reporting, including BYD UK's Q1 2026 sales update and published 2025 UK sales coverage. They are not official BYD or ProfetiQ forecasts.
 
 ## Backtest Pipeline
 
@@ -33,7 +41,7 @@ The script:
 python examples/backtest_pipeline.py
 ```
 
-The script runs the model-level backtest endpoint and prints summary accuracy rows.
+The script runs the legacy model-level backtest endpoint and prints summary accuracy rows. Backtests require the API to be configured with `FORECASTER_USE_LEGACY_PANEL=true`.
 
 ## Notebook
 
